@@ -11,6 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         body {
@@ -139,6 +140,7 @@
         </div>
     </footer>
 
+    <!-- Modal de Canje -->
     <div id="redemption-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
         <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl transform scale-95 transition-transform duration-300 relative border-2 border-pink-200 text-center" id="modal-card"> 
             <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center transition-colors">
@@ -305,6 +307,11 @@
             { id: "antojos", label: "Antojos & Comodines" }
         ];
 
+        // Configuración de Supabase
+        const SUPABASE_URL = "https://rhvivcywunlgzwqsgoah.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJodml2Y3l3dW5sZ3p3cXNnb2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwNzg3NjYsImV4cCI6MjEwNzY1NDc2Nn0.LqA01xRbflk1R8wcl8BdDSZt5n4BAyKNdUpkmmDUAU0";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         window.addEventListener('DOMContentLoaded', () => {
             loadRedeemedState();
             renderCategoryFilters();
@@ -429,8 +436,27 @@
             selectedCouponForModal = null;
         }
 
-        function markAsRedeemedOnly() {
+        async function registerRedemptionInDB(coupon) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('canjes')
+                    .insert([
+                        { 
+                            idcupon: coupon.id, 
+                            desccupon: coupon.title 
+                        }
+                    ]);
+                    
+                if (error) console.error("Error guardando en BD:", error);
+                else console.log("Canje registrado con fecha y hora exitosamente.");
+            } catch (err) {
+                console.error("Error de conexión:", err);
+            }
+        }
+
+        async function markAsRedeemedOnly() {
             if (selectedCouponForModal) {
+                await registerRedemptionInDB(selectedCouponForModal);
                 redeemedCoupons.add(selectedCouponForModal.id);
                 saveRedeemedState();
                 renderCoupons();
@@ -449,8 +475,9 @@
             }
         }
 
-        function sendWhatsAppRedemption() {
+        async function sendWhatsAppRedemption() {
             if (!selectedCouponForModal) return;
+            await registerRedemptionInDB(selectedCouponForModal);
             redeemedCoupons.add(selectedCouponForModal.id);
             saveRedeemedState();
             renderCoupons();            
